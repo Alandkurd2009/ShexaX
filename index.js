@@ -27,6 +27,7 @@ function addXP(userId, xpAmount = 10) {
 }
 
 function hasAdminOrOwnerRole(member) {
+    if (!member || !member.roles) return false;
     return member.roles.cache.some(role => role.name === 'Admin' || role.name === 'Owner');
 }
 
@@ -34,7 +35,9 @@ client.once(Events.ClientReady, async (c) => {
     console.log(`✅ ${c.user.tag} is online!`);
     const voiceChannelId = '1507857397136228404';
     const channel = client.channels.cache.get(voiceChannelId);
-    if (channel && channel.isVoiceBased()) await channel.join();
+    if (channel && channel.isVoiceBased()) {
+        await channel.join();
+    }
 });
 
 client.on(Events.GuildMemberAdd, async (member) => {
@@ -54,12 +57,12 @@ client.on(Events.MessageCreate, async (message) => {
             .setTitle(`🖼 ${user.username}'s Avatar`)
             .setImage(user.displayAvatarURL({ size: 1024, dynamic: true }))
             .setColor('Blue');
-        message.channel.send({ embeds: [embed] });
+        await message.channel.send({ embeds: [embed] });
         return;
     }
     
     if (message.content === 'ping') {
-        message.reply(`🏓 Pong! Latency: ${Date.now() - message.createdTimestamp}ms`);
+        await message.reply(`🏓 Pong! Latency: ${Date.now() - message.createdTimestamp}ms`);
         return;
     }
     
@@ -71,7 +74,7 @@ client.on(Events.MessageCreate, async (message) => {
         if (!user) return message.reply('Usage: `kick @user`');
         if (!user.kickable) return message.reply('I cannot kick this user');
         await user.kick();
-        message.reply(`✅ ${user.user.username} has been kicked.`);
+        await message.reply(`✅ ${user.user.username} has been kicked.`);
     }
     
     if (message.content.startsWith('ban ')) {
@@ -79,7 +82,7 @@ client.on(Events.MessageCreate, async (message) => {
         if (!user) return message.reply('Usage: `ban @user`');
         if (!user.bannable) return message.reply('I cannot ban this user');
         await user.ban();
-        message.reply(`✅ ${user.user.username} has been banned.`);
+        await message.reply(`✅ ${user.user.username} has been banned.`);
     }
     
     if (message.content.startsWith('m ')) {
@@ -93,38 +96,39 @@ client.on(Events.MessageCreate, async (message) => {
         else if (time.endsWith('d')) ms = parseInt(time) * 24 * 60 * 60 * 1000;
         else return message.reply('Invalid time format. Use: 10m, 1h, 2d');
         await user.timeout(ms);
-        message.reply(`✅ ${user.user.username} timed out for ${time}.`);
+        await message.reply(`✅ ${user.user.username} timed out for ${time}.`);
     }
     
     if (message.content.startsWith('um ')) {
         const user = message.mentions.members.first();
         if (!user) return message.reply('Usage: `um @user`');
         await user.timeout(null);
-        message.reply(`✅ ${user.user.username} timeout removed.`);
+        await message.reply(`✅ ${user.user.username} timeout removed.`);
     }
     
     if (message.content.startsWith('c ')) {
         const amount = parseInt(message.content.split(' ')[1]);
         if (isNaN(amount) || amount < 1 || amount > 100) return message.reply('Usage: `c 1-100`');
         await message.channel.bulkDelete(amount, true);
-        message.reply(`✅ Deleted ${amount} messages.`).then(msg => setTimeout(() => msg.delete(), 3000));
+        const msg = await message.reply(`✅ Deleted ${amount} messages.`);
+        setTimeout(() => msg.delete(), 3000);
     }
     
     if (message.content === 'lock') {
         await message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
-        message.reply('🔒 Channel locked.');
+        await message.reply('🔒 Channel locked.');
     }
     
     if (message.content === 'ul') {
         await message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: true });
-        message.reply('🔓 Channel unlocked.');
+        await message.reply('🔓 Channel unlocked.');
     }
     
     if (message.content.startsWith('slowmode ')) {
         const seconds = parseInt(message.content.split(' ')[1]);
         if (isNaN(seconds) || seconds < 0 || seconds > 21600) return message.reply('Usage: `slowmode 5` (0-21600 seconds)');
         await message.channel.setRateLimitPerUser(seconds);
-        message.reply(`✅ Slowmode set to ${seconds} seconds.`);
+        await message.reply(`✅ Slowmode set to ${seconds} seconds.`);
     }
     
     if (message.content.startsWith('+role ')) {
@@ -134,7 +138,7 @@ client.on(Events.MessageCreate, async (message) => {
         const role = message.guild.roles.cache.find(r => r.name === roleName);
         if (!user || !role) return message.reply('Usage: `+role @user RoleName`');
         await user.roles.add(role);
-        message.reply(`✅ Added role ${role.name} to ${user.user.username}`);
+        await message.reply(`✅ Added role ${role.name} to ${user.user.username}`);
     }
     
     if (message.content.startsWith('-role ')) {
@@ -144,20 +148,20 @@ client.on(Events.MessageCreate, async (message) => {
         const role = message.guild.roles.cache.find(r => r.name === roleName);
         if (!user || !role) return message.reply('Usage: `-role @user RoleName`');
         await user.roles.remove(role);
-        message.reply(`✅ Removed role ${role.name} from ${user.user.username}`);
+        await message.reply(`✅ Removed role ${role.name} from ${user.user.username}`);
     }
     
     if (message.content === 'join') {
         if (!message.member.voice.channel) return message.reply('You must be in a voice channel!');
         await message.member.voice.channel.join();
-        message.reply('✅ Joined your voice channel.');
+        await message.reply('✅ Joined your voice channel.');
     }
     
     if (message.content === 'dec') {
         const voiceChannel = message.guild.members.me.voice.channel;
         if (!voiceChannel) return message.reply('I am not in a voice channel!');
         await voiceChannel.leave();
-        message.reply('✅ Left voice channel.');
+        await message.reply('✅ Left voice channel.');
     }
     
     if (message.content === 't') {
@@ -171,7 +175,7 @@ client.on(Events.MessageCreate, async (message) => {
             .setTitle('🏆 Leaderboard')
             .setDescription(desc || 'No levels yet')
             .setColor('Gold');
-        message.channel.send({ embeds: [embed] });
+        await message.channel.send({ embeds: [embed] });
     }
     
     if (message.content.startsWith('ui ')) {
@@ -185,7 +189,7 @@ client.on(Events.MessageCreate, async (message) => {
                 { name: 'Account Created', value: `${user.createdAt.toDateString()}`, inline: true }
             )
             .setColor('Blue');
-        message.channel.send({ embeds: [embed] });
+        await message.channel.send({ embeds: [embed] });
     }
     
     const result = addXP(message.author.id, Math.floor(Math.random() * 15) + 5);
@@ -195,16 +199,18 @@ client.on(Events.MessageCreate, async (message) => {
             .setDescription(`${message.author} reached Level ${result.newLevel}!`)
             .setThumbnail(message.author.displayAvatarURL({ dynamic: true, size: 256 }))
             .setColor('Gold');
-        message.channel.send({ embeds: [embed] });
+        await message.channel.send({ embeds: [embed] });
     }
 });
 
-client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const targetChannelId = '1507857397136228404';
     const bot = newState.guild.members.me;
     if (!bot.voice.channelId || bot.voice.channelId !== targetChannelId) {
         const channel = newState.guild.channels.cache.get(targetChannelId);
-        if (channel && channel.isVoiceBased()) channel.join();
+        if (channel && channel.isVoiceBased()) {
+            await channel.join();
+        }
     }
 });
 
